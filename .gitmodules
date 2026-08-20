@@ -10,3 +10,6 @@
 [submodule "packages/aur/android-sdk"]
 	path = packages/aur/android-sdk
 	url = https://aur.archlinux.org/android-sdk.git
+[submodule "packages/aur/android-ndk"]
+	path = packages/aur/android-ndk
+	url = https://aur.archlinux.org/android-ndk.git
