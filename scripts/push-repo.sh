@@ -5,7 +5,9 @@ set -euo pipefail
 LOCAL_REPO="repo"
 REMOTE="r2:public/barbel"   # <-- set your rclone remote:bucket/path
 
-cd "$(dirname "$0")"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT"
 
 if [ ! -d "$LOCAL_REPO" ]; then
   echo "Error: $LOCAL_REPO does not exist" >&2

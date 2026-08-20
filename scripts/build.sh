@@ -10,7 +10,11 @@ DB_FILE="${REPO_DIR}/${REPO_NAME}.db.tar.gz"
 SIGN="${SIGN:-0}"
 GPG_KEY="${GPG_KEY:-}"
 
-cd "$(dirname "$0")"
+# Resolve to the repo root (one level up from this script's location),
+# regardless of what directory this script is invoked from.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT"
 
 if [ ! -d "$REPO_DIR" ]; then
   echo "Error: $REPO_DIR does not exist" >&2
@@ -21,10 +25,10 @@ shopt -s nullglob
 pkgs=("$REPO_DIR"/*.pkg.tar.zst)
 shopt -u nullglob
 
-# if [ ${#pkgs[@]} -eq 0 ]; then
-#   echo "No packages found in $REPO_DIR" >&2
-#   exit 1
-# fi
+if [ ${#pkgs[@]} -eq 0 ]; then
+  echo "No packages found in $REPO_DIR" >&2
+  exit 1
+fi
 
 echo "Found ${#pkgs[@]} package(s). Rebuilding database..."
 
