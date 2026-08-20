@@ -18,11 +18,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
           fetch-depth: 0
 
       - name: Install build/publish tooling
         run: pacman -Syu --noconfirm --needed base-devel git rclone
+
+      - name: Init submodules
+        run: git submodule update --init --recursive
 
       - name: Configure rclone for R2
         run: |
