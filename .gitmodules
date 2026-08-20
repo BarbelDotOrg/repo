@@ -7,3 +7,6 @@
 [submodule "packages/aur/enroll"]
 	path = packages/aur/enroll
 	url = https://aur.archlinux.org/enroll.git
+[submodule "packages/aur/android-sdk"]
+	path = packages/aur/android-sdk
+	url = https://aur.archlinux.org/android-sdk.git
