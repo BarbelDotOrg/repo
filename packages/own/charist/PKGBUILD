@@ -1,6 +1,6 @@
 # Maintainer: Barbel <barbel@barbel.org>
 pkgname=charist
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc="Bible reader app"
 arch=('x86_64' 'aarch64')
@@ -20,7 +20,7 @@ makedepends=(
 )
 options=('!lto')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('SKIP') # regenerated automatically by the CI script below
+sha256sums=('85a29e03bfee79a1b9632754d22ed356c3051788670298ee57b13fbd7d9e277f')
 
 prepare() {
     cd "$pkgname-$pkgver"
