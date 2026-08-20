@@ -1,4 +1,3 @@
-cat > scripts/build.sh << 'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -22,10 +21,10 @@ shopt -s nullglob
 pkgs=("$REPO_DIR"/*.pkg.tar.zst)
 shopt -u nullglob
 
-if [ ${#pkgs[@]} -eq 0 ]; then
-  echo "No packages found in $REPO_DIR" >&2
-  exit 1
-fi
+# if [ ${#pkgs[@]} -eq 0 ]; then
+#   echo "No packages found in $REPO_DIR" >&2
+#   exit 1
+# fi
 
 echo "Found ${#pkgs[@]} package(s). Rebuilding database..."
 
@@ -48,4 +47,3 @@ fi
 repo-add "${REPO_ADD_ARGS[@]}" "$DB_FILE" "${pkgs[@]}"
 
 echo "Done. Database updated at $DB_FILE"
-EOF

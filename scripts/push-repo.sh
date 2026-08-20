@@ -1,4 +1,3 @@
-cat > scripts/push-repo.sh << 'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -31,4 +30,3 @@ rclone sync "$LOCAL_REPO" "$REMOTE" \
   --progress
 
 echo "Sync complete."
-EOF
