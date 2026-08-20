@@ -1,0 +1,3 @@
+[submodule "packages/aur/debtap"]
+	path = packages/aur/debtap
+	url = https://aur.archlinux.org/debtap.git
