@@ -1,3 +1,6 @@
 [submodule "packages/aur/debtap"]
 	path = packages/aur/debtap
 	url = https://aur.archlinux.org/debtap.git
+[submodule "packages/aur/affinity-bin"]
+	path = packages/aur/affinity-bin
+	url = https://aur.archlinux.org/affinity-bin.git
