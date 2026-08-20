@@ -13,3 +13,6 @@
 [submodule "packages/aur/android-ndk"]
 	path = packages/aur/android-ndk
 	url = https://aur.archlinux.org/android-ndk.git
+[submodule "packages/aur/amber-lang-git"]
+	path = packages/aur/amber-lang-git
+	url = https://aur.archlinux.org/amber-lang-git.git
