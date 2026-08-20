@@ -4,3 +4,6 @@
 [submodule "packages/aur/affinity-bin"]
 	path = packages/aur/affinity-bin
 	url = https://aur.archlinux.org/affinity-bin.git
+[submodule "packages/aur/enroll"]
+	path = packages/aur/enroll
+	url = https://aur.archlinux.org/enroll.git
