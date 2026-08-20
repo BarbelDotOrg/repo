@@ -60,8 +60,9 @@ jobs:
       - name: Build package
         run: |
           useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: /usr/bin/pacman" >> /etc/sudoers
           chown -R builder:builder .
-          su builder -c "cd '${{ inputs.package_path }}' && makepkg -s --noconfirm --needed"
+          su builder -c "cd '${{ inputs.package_path }}' && makepkg -s --noconfirm"
 
       - name: Stage built package into repo
         run: |
