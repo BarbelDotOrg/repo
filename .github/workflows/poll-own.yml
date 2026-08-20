@@ -15,13 +15,13 @@ jobs:
     outputs:
       changed: ${{ steps.poll.outputs.changed }}
     steps:
+      - name: Install deps
+        run: pacman -Syu --noconfirm --needed git curl jq pacman-contrib
+
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
-
-      - name: Install deps
-        run: pacman -Syu --noconfirm --needed git curl jq pacman-contrib
 
       - name: Fix git ownership in container
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
