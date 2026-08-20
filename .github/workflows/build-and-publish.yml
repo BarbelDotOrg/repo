@@ -16,15 +16,16 @@ jobs:
     container:
       image: archlinux:base-devel
     steps:
+      - name: Install git (required before checkout)
+        run: pacman -Syu --noconfirm --needed git
+
       - uses: actions/checkout@v4
         with:
+          submodules: recursive
           fetch-depth: 0
 
-      - name: Install build/publish tooling
-        run: pacman -Syu --noconfirm --needed base-devel git rclone
-
-      - name: Init submodules
-        run: git submodule update --init --recursive
+      - name: Install remaining build/publish tooling
+        run: pacman -Syu --noconfirm --needed base-devel rclone
 
       - name: Configure rclone for R2
         run: |
