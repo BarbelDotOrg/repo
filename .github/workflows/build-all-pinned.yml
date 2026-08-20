@@ -1,0 +1,103 @@
+name: Build and publish all AUR packages
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+
+jobs:
+  find-packages:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.set-matrix.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: set-matrix
+        run: |
+          PACKAGES=$(find packages/aur/ -mindepth 1 -maxdepth 1 -type d -exec test -e {}/PKGBUILD \; -printf '"%f"\n' | jq -R . | jq -s -c .)
+          echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+
+  build-packages:
+    needs: find-packages
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    strategy:
+      matrix:
+        package: ${{ fromJson(needs.find-packages.outputs.packages) }}
+      fail-fast: false
+    steps:
+      - run: pacman -Syu --noconfirm --needed git
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Build package
+        run: |
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: /usr/bin/pacman" >> /etc/sudoers
+          chown -R builder:builder .
+          su builder -c "cd 'packages/aur/${{ matrix.package }}' && makepkg -s --noconfirm"
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pkg-${{ matrix.package }}
+          path: packages/aur/${{ matrix.package }}/*.pkg.tar.zst
+
+  publish-repo:
+    needs: build-packages
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    steps:
+      - run: pacman -Syu --noconfirm --needed git base-devel rclone
+
+      - uses: actions/checkout@v4
+
+      - name: Download all package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pkg-*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Configure rclone for R2
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf << EOF
+          [r2]
+          type = s3
+          provider = Cloudflare
+          access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
+          secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          endpoint = ${{ secrets.R2_ENDPOINT }}
+          acl = private
+          EOF
+
+      - name: Pull current repo state from R2
+        run: |
+          mkdir -p repo
+          rclone sync r2:public/barbel repo --progress
+
+      - name: Import GPG signing key
+        run: |
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | base64 -d | gpg --batch --import
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          gpgconf --reload gpg-agent
+
+      - name: Stage built packages into repo
+        run: |
+          mkdir -p repo/os/x86_64
+          cp artifacts/*.pkg.tar.zst repo/os/x86_64/
+
+      - name: Sign and rebuild repo database
+        run: |
+          SIGN=1 GPG_KEY="${{ secrets.GPG_KEY_ID }}" ./scripts/build.sh
+        env:
+          GPG_TTY: /dev/null
+
+      - name: Push updated repo to R2
+        run: ./scripts/push-repo.sh
