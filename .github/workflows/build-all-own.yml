@@ -1,4 +1,4 @@
-name: Build all pinned AUR packages
+name: Build all own packages
 permissions:
   contents: write
 
@@ -15,12 +15,12 @@ jobs:
 
       - id: list
         run: |
-          packages=$(ls -1 packages/aur | jq -R -s -c 'split("\n")[:-1]')
+          packages=$(ls -1 packages/own | jq -R -s -c 'split("\n")[:-1]')
           echo "packages=$packages" >> "$GITHUB_OUTPUT"
 
   build-and-publish:
     needs: discover
-    uses: ./.github/workflows/build-pinned.yml
+    uses: ./.github/workflows/build-own.yml
     with:
       packages: ${{ needs.discover.outputs.packages }}
     secrets: inherit

@@ -1,0 +1,86 @@
+name: Publish packages
+permissions:
+  contents: write
+
+# Publishing mutates the shared repo state in R2 (pull -> stage -> sign -> push).
+# It must never run concurrently with itself, even across unrelated workflow runs,
+# so it is deliberately a single non-matrixed job with a global concurrency lock.
+concurrency:
+  group: repo-publish
+  cancel-in-progress: false
+
+on:
+  workflow_call:
+    inputs:
+      artifact_pattern:
+        description: 'Glob pattern of build artifacts to download and publish'
+        required: false
+        type: string
+        default: 'pkg-*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    steps:
+      - name: Install git (required before checkout)
+        run: pacman -Syu --noconfirm --needed git
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download built package artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: ${{ inputs.artifact_pattern }}
+          path: built-packages
+          merge-multiple: true
+
+      - name: Install publish tooling
+        run: pacman -Syu --noconfirm --needed base-devel rclone
+
+      - name: Configure rclone for R2
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf << EOF
+          [r2]
+          type = s3
+          provider = Cloudflare
+          access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
+          secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          endpoint = ${{ secrets.R2_ENDPOINT }}
+          acl = private
+          EOF
+
+      - name: Pull current repo state from R2
+        run: |
+          mkdir -p repo
+          rclone sync r2:public/barbel repo --progress
+
+      - name: Import GPG signing key
+        run: |
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | base64 -d | gpg --batch --import
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          gpgconf --reload gpg-agent
+          # Prime the agent cache so build.sh's later `gpg --detach-sign` (no --batch)
+          # doesn't block waiting on a pinentry that can't display
+          echo "test" | gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
+            --local-user "${{ secrets.GPG_KEY_ID }}" --detach-sign --output /dev/null -
+
+      - name: Stage all built packages into repo
+        run: |
+          mkdir -p repo/os/x86_64
+          cp built-packages/*.pkg.tar.zst repo/os/x86_64/
+
+      - name: Sign and rebuild repo database
+        run: |
+          SIGN=1 GPG_KEY="${{ secrets.GPG_KEY_ID }}" ./scripts/build.sh
+        env:
+          GPG_TTY: /dev/null
+
+      - name: Push updated repo to R2
+        run: ./scripts/push-repo.sh

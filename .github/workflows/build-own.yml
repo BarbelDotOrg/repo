@@ -1,7 +1,6 @@
-name: Build own package
+name: Build own packages
 permissions:
   contents: write
-
 
 on:
   workflow_dispatch:
@@ -22,7 +21,11 @@ jobs:
       matrix:
         package: ${{ inputs.package && fromJSON(format('["{0}"]', inputs.package)) || fromJSON(inputs.packages) }}
       fail-fast: false
-    uses: ./.github/workflows/build-and-publish.yml
+    uses: ./.github/workflows/build.yml
     with:
       package_path: packages/own/${{ matrix.package }}
+
+  publish:
+    needs: build
+    uses: ./.github/workflows/publish.yml
     secrets: inherit

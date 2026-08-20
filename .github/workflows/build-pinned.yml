@@ -1,4 +1,4 @@
-name: Build pinned AUR package
+name: Build pinned AUR packages
 permissions:
   contents: write
 
@@ -8,10 +8,24 @@ on:
       package:
         description: 'Package dir name under packages/aur/'
         required: true
+  workflow_call:
+    inputs:
+      packages:
+        description: 'JSON array of package dir names to build'
+        required: true
+        type: string
 
 jobs:
   build:
-    uses: ./.github/workflows/build-and-publish.yml
+    strategy:
+      matrix:
+        package: ${{ inputs.package && fromJSON(format('["{0}"]', inputs.package)) || fromJSON(inputs.packages) }}
+      fail-fast: false
+    uses: ./.github/workflows/build.yml
     with:
-      package_path: packages/aur/${{ inputs.package }}
+      package_path: packages/aur/${{ matrix.package }}
+
+  publish:
+    needs: build
+    uses: ./.github/workflows/publish.yml
     secrets: inherit

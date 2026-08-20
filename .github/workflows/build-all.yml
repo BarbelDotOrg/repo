@@ -1,0 +1,38 @@
+name: Build all packages
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.list.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: list
+        run: |
+          own=$(ls -1 packages/own | sed 's|^|packages/own/|')
+          aur=$(ls -1 packages/aur | sed 's|^|packages/aur/|')
+          packages=$(printf '%s\n%s\n' "$own" "$aur" | grep -v '^$' | jq -R -s -c 'split("\n")[:-1]')
+          echo "packages=$packages" >> "$GITHUB_OUTPUT"
+
+  # Single matrix across BOTH own and pinned packages, so there's only ever
+  # one publish job for the whole run (not one per source, which would race).
+  build:
+    needs: discover
+    strategy:
+      matrix:
+        package_path: ${{ fromJSON(needs.discover.outputs.packages) }}
+      fail-fast: false
+    uses: ./.github/workflows/build.yml
+    with:
+      package_path: ${{ matrix.package_path }}
+
+  publish:
+    needs: build
+    uses: ./.github/workflows/publish.yml
+    secrets: inherit
