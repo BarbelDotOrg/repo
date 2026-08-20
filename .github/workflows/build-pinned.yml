@@ -1,0 +1,15 @@
+name: Build pinned AUR package
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package dir name under packages/aur/'
+        required: true
+
+jobs:
+  build:
+    uses: ./.github/workflows/build-and-publish.yml
+    with:
+      package_path: packages/aur/${{ inputs.package }}
+    secrets: inherit

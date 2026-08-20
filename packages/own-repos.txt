@@ -1,0 +1,2 @@
+# pkgdir     owner/repo
+charist      barbelorg/charist

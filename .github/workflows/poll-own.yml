@@ -1,0 +1,48 @@
+name: Poll own packages for new releases
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # hourly
+  workflow_dispatch: {}
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    outputs:
+      changed: ${{ steps.poll.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Install deps
+        run: pacman -Syu --noconfirm --needed git curl jq pacman-contrib
+
+      - name: Fix git ownership in container
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Set git identity (github bot)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Poll for new releases
+        id: poll
+        run: |
+          result=$(./scripts/poll-own-releases.sh)
+          echo "changed=$result" >> "$GITHUB_OUTPUT"
+
+      - name: Push version bumps
+        if: steps.poll.outputs.changed != '[]'
+        run: git push
+
+  build:
+    needs: poll
+    if: needs.poll.outputs.changed != '[]'
+    uses: ./.github/workflows/build-own.yml
+    with:
+      packages: ${{ needs.poll.outputs.changed }}
+    secrets: inherit

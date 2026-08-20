@@ -1,0 +1,73 @@
+name: Build and publish package
+
+on:
+  workflow_call:
+    inputs:
+      package_path:
+        description: 'Path to the package dir, e.g. packages/own/charist'
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Install build/publish tooling
+        run: pacman -Syu --noconfirm --needed base-devel git rclone
+
+      - name: Configure rclone for R2
+        run: |
+          mkdir -p ~/.config/rclone
+          cat > ~/.config/rclone/rclone.conf << EOF
+          [r2]
+          type = s3
+          provider = Cloudflare
+          access_key_id = ${{ secrets.R2_ACCESS_KEY_ID }}
+          secret_access_key = ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          endpoint = ${{ secrets.R2_ENDPOINT }}
+          acl = private
+          EOF
+
+      - name: Pull current repo state from R2
+        run: |
+          mkdir -p repo
+          rclone sync r2:public/barbel repo --progress
+
+      - name: Import GPG signing key
+        run: |
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | base64 -d | gpg --batch --import
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          gpgconf --reload gpg-agent
+          # Prime the agent cache so build.sh's later `gpg --detach-sign` (no --batch)
+          # doesn't block waiting on a pinentry that can't display
+          echo "test" | gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
+            --local-user "${{ secrets.GPG_KEY_ID }}" --detach-sign --output /dev/null -
+
+      - name: Build package
+        run: |
+          useradd -m builder
+          chown -R builder:builder .
+          su builder -c "cd '${{ inputs.package_path }}' && makepkg -s --noconfirm --needed"
+
+      - name: Stage built package into repo
+        run: |
+          mkdir -p repo/os/x86_64
+          cp "${{ inputs.package_path }}"/*.pkg.tar.zst repo/os/x86_64/
+
+      - name: Sign and rebuild repo database
+        run: |
+          SIGN=1 GPG_KEY="${{ secrets.GPG_KEY_ID }}" ./scripts/build.sh
+        env:
+          GPG_TTY: /dev/null
+
+      - name: Push updated repo to R2
+        run: ./scripts/push-repo.sh

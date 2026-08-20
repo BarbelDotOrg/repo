@@ -1,0 +1,27 @@
+name: Build own package
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: 'Package dir name under packages/own/'
+        required: true
+  workflow_call:
+    inputs:
+      packages:
+        description: 'JSON array of package dir names to build'
+        required: true
+        type: string
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        package: ${{ inputs.package && fromJSON(format('["{0}"]', inputs.package)) || fromJSON(inputs.packages) }}
+      fail-fast: false
+    uses: ./.github/workflows/build-and-publish.yml
+    with:
+      package_path: packages/own/${{ matrix.package }}
+    secrets: inherit
