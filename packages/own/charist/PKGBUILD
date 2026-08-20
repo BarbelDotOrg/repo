@@ -4,7 +4,7 @@ pkgver=0.1.0
 pkgrel=1
 pkgdesc="Bible reader app"
 arch=('x86_64' 'aarch64')
-url="https://github.com/barbelorg/charist"
+url="https://github.com/barbelorgdotorg/charist"
 license=('AGPL-3.0-only')
 depends=(
     'gcc-libs'
