@@ -1,4 +1,6 @@
 name: Build and publish package
+permissions:
+  contents: write
 
 on:
   workflow_call:

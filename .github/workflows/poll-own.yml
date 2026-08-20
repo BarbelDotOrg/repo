@@ -1,4 +1,6 @@
 name: Poll own packages for new releases
+permissions:
+  contents: write
 
 on:
   schedule:
