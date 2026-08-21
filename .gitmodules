@@ -16,3 +16,6 @@
 [submodule "packages/aur/amber-lang-git"]
 	path = packages/aur/amber-lang-git
 	url = https://aur.archlinux.org/amber-lang-git.git
+[submodule "packages/aur/desktop-plus-bin"]
+	path = packages/aur/desktop-plus-bin
+	url = https://aur.archlinux.org/desktop-plus-bin.git
