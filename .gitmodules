@@ -37,3 +37,6 @@
 [submodule "packages/aur/cosmic-ext-applet-drives-git"]
 	path = packages/aur/cosmic-ext-applet-drives-git
 	url = https://aur.archlinux.org/cosmic-ext-applet-drives-git.git
+[submodule "packages/aur/cosmic-ext-applet-dict-git"]
+	path = packages/aur/cosmic-ext-applet-dict-git
+	url = https://aur.archlinux.org/cosmic-ext-applet-dict-git.git
