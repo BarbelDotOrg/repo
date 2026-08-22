@@ -49,3 +49,6 @@
 [submodule "packages/aur/visual-studio-code-bin"]
 	path = packages/aur/visual-studio-code-bin
 	url = https://aur.archlinux.org/visual-studio-code-bin.git
+[submodule "packages/aur/visual-studio-code-insiders-bin"]
+	path = packages/aur/visual-studio-code-insiders-bin
+	url = https://aur.archlinux.org/visual-studio-code-insiders-bin.git
