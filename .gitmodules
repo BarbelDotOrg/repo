@@ -19,3 +19,6 @@
 [submodule "packages/aur/desktop-plus-bin"]
 	path = packages/aur/desktop-plus-bin
 	url = https://aur.archlinux.org/desktop-plus-bin.git
+[submodule "packages/aur/cosmic-ext-applet-tempest"]
+	path = packages/aur/cosmic-ext-applet-tempest
+	url = https://aur.archlinux.org/cosmic-ext-applet-tempest.git
