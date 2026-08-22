@@ -22,3 +22,6 @@
 [submodule "packages/aur/cosmic-ext-applet-tempest"]
 	path = packages/aur/cosmic-ext-applet-tempest
 	url = https://aur.archlinux.org/cosmic-ext-applet-tempest.git
+[submodule "packages/aur/cosmic-ext-applet-minimon"]
+	path = packages/aur/cosmic-ext-applet-minimon
+	url = https://aur.archlinux.org/cosmic-ext-applet-minimon.git
