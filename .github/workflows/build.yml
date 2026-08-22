@@ -25,7 +25,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install remaining build tooling
-        run: pacman -Syu --noconfirm --needed base-devel
+        run: pacman -Syu --noconfirm --needed base-devel rust
 
       - name: Compute artifact-safe name
         id: name
@@ -38,11 +38,11 @@ jobs:
           chown -R builder:builder .
           su builder -c "
             cd /tmp &&
-            git clone https://aur.archlinux.org/paru-bin.git &&
-            cd paru-bin &&
+            git clone https://aur.archlinux.org/paru.git &&
+            cd paru &&
             makepkg -si --noconfirm
           "
-      
+            
       - name: Build package
         run: |
           su builder -c "cd '${{ inputs.package_path }}' && paru -B --noconfirm ."
