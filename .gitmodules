@@ -43,3 +43,6 @@
 [submodule "packages/aur/cosmic-ext-applet-emoji-selector-git"]
 	path = packages/aur/cosmic-ext-applet-emoji-selector-git
 	url = https://aur.archlinux.org/cosmic-ext-applet-emoji-selector-git.git
+[submodule "packages/aur/cosmic-ext-applet-external-monitor-brightness-custom-git"]
+	path = packages/aur/cosmic-ext-applet-external-monitor-brightness-custom-git
+	url = https://aur.archlinux.org/cosmic-ext-applet-external-monitor-brightness-custom-git.git
