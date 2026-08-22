@@ -46,3 +46,6 @@
 [submodule "packages/aur/cosmic-ext-applet-external-monitor-brightness-custom-git"]
 	path = packages/aur/cosmic-ext-applet-external-monitor-brightness-custom-git
 	url = https://aur.archlinux.org/cosmic-ext-applet-external-monitor-brightness-custom-git.git
+[submodule "packages/aur/visual-studio-code-bin"]
+	path = packages/aur/visual-studio-code-bin
+	url = https://aur.archlinux.org/visual-studio-code-bin.git
