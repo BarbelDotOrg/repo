@@ -58,3 +58,6 @@
 [submodule "packages/aur/cosmic-external-osd-git"]
 	path = packages/aur/cosmic-external-osd-git
 	url = https://aur.archlinux.org/cosmic-external-osd-git.git
+[submodule "packages/aur/input-remapper-git"]
+	path = packages/aur/input-remapper-git
+	url = https://aur.archlinux.org/input-remapper-git.git
