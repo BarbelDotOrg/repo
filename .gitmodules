@@ -25,3 +25,6 @@
 [submodule "packages/aur/cosmic-ext-applet-minimon"]
 	path = packages/aur/cosmic-ext-applet-minimon
 	url = https://aur.archlinux.org/cosmic-ext-applet-minimon.git
+[submodule "packages/aur/cosmic-ext-applet-privacy-indicator"]
+	path = packages/aur/cosmic-ext-applet-privacy-indicator
+	url = https://aur.archlinux.org/cosmic-ext-applet-privacy-indicator.git
