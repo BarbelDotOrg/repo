@@ -28,3 +28,6 @@
 [submodule "packages/aur/cosmic-ext-applet-privacy-indicator"]
 	path = packages/aur/cosmic-ext-applet-privacy-indicator
 	url = https://aur.archlinux.org/cosmic-ext-applet-privacy-indicator.git
+[submodule "packages/aur/cosmic-ext-applet-logomenu"]
+	path = packages/aur/cosmic-ext-applet-logomenu
+	url = https://aur.archlinux.org/cosmic-ext-applet-logomenu.git
