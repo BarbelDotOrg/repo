@@ -55,3 +55,6 @@
 [submodule "packages/aur/godots"]
 	path = packages/aur/godots
 	url = https://aur.archlinux.org/godots.git
+[submodule "packages/aur/cosmic-external-osd-git"]
+	path = packages/aur/cosmic-external-osd-git
+	url = https://aur.archlinux.org/cosmic-external-osd-git.git
