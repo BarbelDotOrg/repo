@@ -61,3 +61,6 @@
 [submodule "packages/aur/input-remapper-git"]
 	path = packages/aur/input-remapper-git
 	url = https://aur.archlinux.org/input-remapper-git.git
+[submodule "packages/aur/openlogi-bin"]
+	path = packages/aur/openlogi-bin
+	url = https://aur.archlinux.org/openlogi-bin.git
