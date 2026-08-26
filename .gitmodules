@@ -67,3 +67,6 @@
 [submodule "packages/aur/cupola-git"]
 	path = packages/aur/cupola-git
 	url = https://aur.archlinux.org/cupola-git.git
+[submodule "packages/aur/cosmic-viewer-git"]
+	path = packages/aur/cosmic-viewer-git
+	url = https://aur.archlinux.org/cosmic-viewer-git.git
