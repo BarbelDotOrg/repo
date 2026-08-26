@@ -64,3 +64,6 @@
 [submodule "packages/aur/openlogi-bin"]
 	path = packages/aur/openlogi-bin
 	url = https://aur.archlinux.org/openlogi-bin.git
+[submodule "packages/aur/cupola-git"]
+	path = packages/aur/cupola-git
+	url = https://aur.archlinux.org/cupola-git.git
