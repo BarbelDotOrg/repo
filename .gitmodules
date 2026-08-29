@@ -64,3 +64,6 @@
 [submodule "packages/aur/openlogi-bin"]
 	path = packages/aur/openlogi-bin
 	url = https://aur.archlinux.org/openlogi-bin.git
+[submodule "packages/own/wallpapers"]
+	path = packages/own/wallpapers
+	url = https://github.com/barbeldotorg/wallpapers
