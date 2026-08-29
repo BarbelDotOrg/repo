@@ -1,7 +1,6 @@
 name: Build package
 permissions:
   contents: write
-
 on:
   workflow_call:
     inputs:
@@ -9,7 +8,6 @@ on:
         description: 'Path to the package dir, e.g. packages/own/charist'
         required: true
         type: string
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -31,18 +29,36 @@ jobs:
         id: name
         run: echo "name=pkg-$(echo '${{ inputs.package_path }}' | tr '/' '-')" >> "$GITHUB_OUTPUT"
 
-      - name: Install AUR helper
+      - name: Clone paru AUR repo (for PKGBUILD hash + build fallback)
+        run: git clone --depth 1 https://aur.archlinux.org/paru.git /tmp/paru
+
+      - name: Cache built paru package
+        id: paru-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/paru-pkg
+          key: paru-pkg-${{ hashFiles('/tmp/paru/PKGBUILD') }}
+
+      - name: Set up builder user
         run: |
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-          chown -R builder:builder .
+          chown -R builder:builder . /tmp/paru
+          mkdir -p /tmp/paru-pkg
+          chown -R builder:builder /tmp/paru-pkg
+
+      - name: Build paru (cache miss only)
+        if: steps.paru-cache.outputs.cache-hit != 'true'
+        run: |
           su builder -c "
-            cd /tmp &&
-            git clone https://aur.archlinux.org/paru.git &&
-            cd paru &&
-            makepkg -si --noconfirm
+            cd /tmp/paru &&
+            makepkg --noconfirm
           "
-            
+          cp /tmp/paru/*.pkg.tar.zst /tmp/paru-pkg/
+
+      - name: Install paru
+        run: pacman -U --noconfirm /tmp/paru-pkg/*.pkg.tar.zst
+
       - name: Build package
         run: |
           su builder -c "cd '${{ inputs.package_path }}' && paru -B --noconfirm ."

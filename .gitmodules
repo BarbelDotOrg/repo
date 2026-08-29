@@ -67,3 +67,12 @@
 [submodule "packages/own/charist"]
 	path = packages/own/charist
 	url = https://github.com/barbeldotorg/charist
+[submodule "packages/aur/cupola-git"]
+	path = packages/aur/cupola-git
+	url = https://aur.archlinux.org/cupola-git.git
+[submodule "packages/aur/cosmic-viewer-git"]
+	path = packages/aur/cosmic-viewer-git
+	url = https://aur.archlinux.org/cosmic-viewer-git.git
+[submodule "packages/aur/calamares"]
+	path = packages/aur/calamares
+	url = https://aur.archlinux.org/calamares.git
