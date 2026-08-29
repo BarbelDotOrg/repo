@@ -78,14 +78,21 @@ jobs:
       - name: Install paru
         run: pacman -U --noconfirm /tmp/paru-pkg/*.pkg.tar.zst
 
+      - name: Stage package without git metadata
+        run: |
+          rm -rf /tmp/build-pkg
+          cp -r "${{ inputs.package_path }}" /tmp/build-pkg
+          rm -rf /tmp/build-pkg/.git
+          chown -R builder:builder /tmp/build-pkg
+
       - name: Build package
         run: |
-          su builder -c "cd '${{ inputs.package_path }}' && paru -B --noconfirm ."
+          su builder -c "cd /tmp/build-pkg && paru -B --noconfirm ."
 
       - name: Upload built package
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.name.outputs.name }}
-          path: ${{ inputs.package_path }}/*.pkg.tar.zst
+          path: /tmp/build-pkg/*.pkg.tar.zst
           if-no-files-found: error
           retention-days: 1
