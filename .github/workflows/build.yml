@@ -19,8 +19,27 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
           fetch-depth: 0
+
+      - name: Init and update only the target submodule
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+          git submodule update --init --recursive -- "${{ inputs.package_path }}"
+
+      - name: Debug submodule state
+        run: |
+          echo "---- git submodule status ----"
+          git submodule status
+          echo "---- superproject-recorded SHA for this path ----"
+          git ls-tree HEAD "${{ inputs.package_path }}"
+          echo "---- actual HEAD inside submodule ----"
+          git -C "${{ inputs.package_path }}" log -1 --oneline || echo "not a git dir / not checked out"
+          echo "---- working tree contents ----"
+          ls -la "${{ inputs.package_path }}"
+          ls -la "${{ inputs.package_path }}/src" 2>&1 || echo "no src dir"
+          echo "---- Cargo.toml as checked out ----"
+          cat "${{ inputs.package_path }}/Cargo.toml" 2>&1 || echo "no Cargo.toml"
 
       - name: Install remaining build tooling
         run: pacman -Syu --noconfirm --needed base-devel rust
