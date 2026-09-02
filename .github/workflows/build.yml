@@ -77,10 +77,17 @@ jobs:
       - name: Configure git safe.directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      - name: Init submodule (aur packages only)
-        if: matrix.group == 'aur'
+      - name: Init package submodule (if it is one)
         run: |
-          git submodule update --init --depth 1 -- "packages/${{ matrix.group }}/${{ matrix.name }}"
+          set -euo pipefail
+          PKG_PATH="packages/${{ matrix.group }}/${{ matrix.name }}"
+          if [ -f .gitmodules ] && git config -f .gitmodules --get-regexp '\.path$' \
+              | awk '{print $2}' | grep -qx "$PKG_PATH"; then
+            echo "$PKG_PATH is a submodule, initializing."
+            git submodule update --init --depth 1 -- "$PKG_PATH"
+          else
+            echo "$PKG_PATH is not a submodule, nothing to init."
+          fi
 
       - name: Create unprivileged build user
         run: |
