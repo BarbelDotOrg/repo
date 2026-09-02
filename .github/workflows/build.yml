@@ -108,6 +108,15 @@ jobs:
           fi
           echo "default-key ${{ secrets.GPG_KEY_ID }}" >> ~/.gnupg/gpg.conf || true
 
+      - name: Debug package directory
+        run: |
+          echo "== ls -la =="
+          ls -la "packages/${{ matrix.group }}/${{ matrix.name }}" || true
+          echo "== git status (repo root) =="
+          git status --short "packages/${{ matrix.group }}/${{ matrix.name }}" || true
+          echo "== git ls-files (is it tracked?) =="
+          git ls-files "packages/${{ matrix.group }}/${{ matrix.name }}" || true
+
       - name: Build package
         run: |
           set -euo pipefail
