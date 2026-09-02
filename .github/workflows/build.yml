@@ -77,7 +77,26 @@ jobs:
       - name: Configure git safe.directory
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
+      - name: Compute package ref (cache key)
+        id: pkgref
+        run: |
+          set -euo pipefail
+          PKG_PATH="packages/${{ matrix.group }}/${{ matrix.name }}"
+          # Works for submodules (returns the pinned commit SHA) and plain
+          # dirs (returns the tree SHA) without needing the submodule inited.
+          REF=$(git rev-parse "HEAD:$PKG_PATH")
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "Package ref for $PKG_PATH: $REF"
+
+      - name: Restore cached build
+        id: pkgcache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/out
+          key: pkg-${{ matrix.group }}-${{ matrix.name }}-${{ steps.pkgref.outputs.ref }}
+
       - name: Init package submodule (if it is one)
+        if: steps.pkgcache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           PKG_PATH="packages/${{ matrix.group }}/${{ matrix.name }}"
@@ -90,12 +109,25 @@ jobs:
           fi
 
       - name: Create unprivileged build user
+        if: steps.pkgcache.outputs.cache-hit != 'true'
         run: |
           useradd -m builder
           echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder
           chown -R builder:builder "$GITHUB_WORKSPACE"
 
+      - name: Restore cargo cache
+        if: steps.pkgcache.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            /home/builder/.cargo/registry
+            /home/builder/.cargo/git
+          key: cargo-registry-v1
+          restore-keys: |
+            cargo-registry-
+
       - name: Import GPG key
+        if: steps.pkgcache.outputs.cache-hit != 'true'
         env:
           GPG_PRIVATE_KEY_RAW: ${{ secrets.GPG_PRIVATE_KEY }}
         run: |
@@ -118,6 +150,7 @@ jobs:
           echo "default-key ${{ secrets.GPG_KEY_ID }}" >> ~/.gnupg/gpg.conf || true
 
       - name: Debug package directory
+        if: steps.pkgcache.outputs.cache-hit != 'true'
         run: |
           echo "== ls -la =="
           ls -la "packages/${{ matrix.group }}/${{ matrix.name }}" || true
@@ -131,12 +164,14 @@ jobs:
             || echo "NO - not present in HEAD commit (never committed, or wrong path)"
 
       - name: Build package
+        if: steps.pkgcache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           cd "packages/${{ matrix.group }}/${{ matrix.name }}"
           sudo -u builder makepkg --syncdeps --noconfirm --clean
 
       - name: Sign built packages
+        if: steps.pkgcache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           cd "packages/${{ matrix.group }}/${{ matrix.name }}"
@@ -154,6 +189,14 @@ jobs:
           done
           mkdir -p /tmp/out
           cp "${pkgs[@]}" *.sig /tmp/out/
+
+      - name: Report cache status
+        run: |
+          if [ "${{ steps.pkgcache.outputs.cache-hit }}" == "true" ]; then
+            echo "✅ ${{ matrix.name }}: commit unchanged, reused cached build"
+          else
+            echo "🔨 ${{ matrix.name }}: rebuilt"
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
