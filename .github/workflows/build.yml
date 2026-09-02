@@ -23,28 +23,37 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
-          submodules: false
+          submodules: recursive
           fetch-depth: 1
 
       - name: Build package matrix
         id: set-matrix
         run: |
           set -euo pipefail
-          entries="[]"
-          for group in aur own; do
-            dir="packages/$group"
-            [ -d "$dir" ] || continue
-            for pkgdir in "$dir"/*/; do
-              [ -f "${pkgdir}PKGBUILD" ] || continue
-              name=$(basename "$pkgdir")
-              entries=$(echo "$entries" | jq --arg name "$name" --arg group "$group" \
-                '. += [{"name": $name, "group": $group}]')
-            done
-          done
-          echo "matrix={\"include\":$entries}" >> "$GITHUB_OUTPUT"
-          echo "Discovered $(echo "$entries" | jq length) packages"
+          matrix=$(
+            {
+              for group in aur own; do
+                dir="packages/$group"
+                [ -d "$dir" ] || continue
+                for pkgdir in "$dir"/*/; do
+                  [ -f "${pkgdir}PKGBUILD" ] || continue
+                  name=$(basename "$pkgdir")
+                  jq -nc --arg name "$name" --arg group "$group" '{name:$name, group:$group}'
+                done
+              done
+            } | jq -sc '{include: .}'
+          )
+
+          count=$(echo "$matrix" | jq '.include | length')
+          if [ "$count" -eq 0 ]; then
+            echo "::error::No PKGBUILD directories found under packages/aur or packages/own"
+            exit 1
+          fi
+
+          echo "Discovered $count packages"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
 
   build:
     needs: discover
@@ -60,7 +69,7 @@ jobs:
         run: |
           pacman -Syu --noconfirm --needed git sudo jq
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: false
           fetch-depth: 0
