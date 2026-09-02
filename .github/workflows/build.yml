@@ -74,10 +74,12 @@ jobs:
           submodules: false
           fetch-depth: 0
 
+      - name: Configure git safe.directory
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
       - name: Init submodule (aur packages only)
         if: matrix.group == 'aur'
         run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
           git submodule update --init --depth 1 -- "packages/${{ matrix.group }}/${{ matrix.name }}"
 
       - name: Create unprivileged build user
@@ -112,10 +114,14 @@ jobs:
         run: |
           echo "== ls -la =="
           ls -la "packages/${{ matrix.group }}/${{ matrix.name }}" || true
-          echo "== git status (repo root) =="
-          git status --short "packages/${{ matrix.group }}/${{ matrix.name }}" || true
-          echo "== git ls-files (is it tracked?) =="
-          git ls-files "packages/${{ matrix.group }}/${{ matrix.name }}" || true
+          echo "== git ls-files (is PKGBUILD tracked in this commit?) =="
+          git ls-files "packages/${{ matrix.group }}/${{ matrix.name }}"
+          echo "== git check-ignore -v (is it gitignored?) =="
+          git check-ignore -v "packages/${{ matrix.group }}/${{ matrix.name }}/PKGBUILD" || echo "not ignored"
+          echo "== does PKGBUILD exist in HEAD? =="
+          git cat-file -e "HEAD:packages/${{ matrix.group }}/${{ matrix.name }}/PKGBUILD" \
+            && echo "YES - present in HEAD commit" \
+            || echo "NO - not present in HEAD commit (never committed, or wrong path)"
 
       - name: Build package
         run: |
