@@ -1,98 +1,153 @@
-name: Build package
-permissions:
-  contents: write
+name: Build & Publish Arch Repo
+
 on:
-  workflow_call:
-    inputs:
-      package_path:
-        description: 'Path to the package dir, e.g. packages/own/charist'
-        required: true
-        type: string
+  push:
+    branches: [master]
+    paths:
+      - "packages/**"
+  workflow_dispatch: {}
+
+concurrency:
+  group: build-repo-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # --- EDIT THESE ---
+  REPO_NAME: barbel          # name of your pacman repo (barbel.db.tar.gz etc.)
+  R2_BUCKET: barbel-repo      # your R2 bucket name (not in the secrets you pasted - add it)
+  # -------------------
+
 jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 1
+
+      - name: Build package matrix
+        id: set-matrix
+        run: |
+          set -euo pipefail
+          entries="[]"
+          for group in aur own; do
+            dir="packages/$group"
+            [ -d "$dir" ] || continue
+            for pkgdir in "$dir"/*/; do
+              [ -f "${pkgdir}PKGBUILD" ] || continue
+              name=$(basename "$pkgdir")
+              entries=$(echo "$entries" | jq --arg name "$name" --arg group "$group" \
+                '. += [{"name": $name, "group": $group}]')
+            done
+          done
+          echo "matrix={\"include\":$entries}" >> "$GITHUB_OUTPUT"
+          echo "Discovered $(echo "$entries" | jq length) packages"
+
   build:
+    needs: discover
     runs-on: ubuntu-latest
     container:
       image: archlinux:base-devel
+      options: --user root
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
     steps:
-      - name: Install git (required before checkout)
-        run: pacman -Syu --noconfirm --needed git
+      - name: Prep base system
+        run: |
+          pacman -Syu --noconfirm --needed git sudo jq
 
       - uses: actions/checkout@v4
         with:
           submodules: false
           fetch-depth: 0
 
-      - name: Init and update only the target submodule
+      - name: Init submodule (aur packages only)
+        if: matrix.group == 'aur'
         run: |
-          git config --global --add safe.directory "$(pwd)"
-          git submodule update --init --recursive -- "${{ inputs.package_path }}"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git submodule update --init --depth 1 -- "packages/${{ matrix.group }}/${{ matrix.name }}"
 
-      - name: Debug submodule state
-        run: |
-          echo "---- git submodule status ----"
-          git submodule status
-          echo "---- superproject-recorded SHA for this path ----"
-          git ls-tree HEAD "${{ inputs.package_path }}"
-          echo "---- actual HEAD inside submodule ----"
-          git -C "${{ inputs.package_path }}" log -1 --oneline || echo "not a git dir / not checked out"
-          echo "---- working tree contents ----"
-          ls -la "${{ inputs.package_path }}"
-          ls -la "${{ inputs.package_path }}/src" 2>&1 || echo "no src dir"
-          echo "---- Cargo.toml as checked out ----"
-          cat "${{ inputs.package_path }}/Cargo.toml" 2>&1 || echo "no Cargo.toml"
-
-      - name: Install remaining build tooling
-        run: pacman -Syu --noconfirm --needed base-devel rust
-
-      - name: Compute artifact-safe name
-        id: name
-        run: echo "name=pkg-$(echo '${{ inputs.package_path }}' | tr '/' '-')" >> "$GITHUB_OUTPUT"
-
-      - name: Clone paru AUR repo (for PKGBUILD hash + build fallback)
-        run: git clone --depth 1 https://aur.archlinux.org/paru.git /tmp/paru
-
-      - name: Cache built paru package
-        id: paru-cache
-        uses: actions/cache@v4
-        with:
-          path: /tmp/paru-pkg
-          key: paru-pkg-${{ hashFiles('/tmp/paru/PKGBUILD') }}
-
-      - name: Set up builder user
+      - name: Create unprivileged build user
         run: |
           useradd -m builder
-          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-          chown -R builder:builder . /tmp/paru
-          mkdir -p /tmp/paru-pkg
-          chown -R builder:builder /tmp/paru-pkg
+          echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
 
-      - name: Build paru (cache miss only)
-        if: steps.paru-cache.outputs.cache-hit != 'true'
+      - name: Import GPG key
         run: |
-          su builder -c "
-            cd /tmp/paru &&
-            makepkg --noconfirm
-          "
-          cp /tmp/paru/*.pkg.tar.zst /tmp/paru-pkg/
-
-      - name: Install paru
-        run: pacman -U --noconfirm /tmp/paru-pkg/*.pkg.tar.zst
-
-      - name: Stage package without git metadata
-        run: |
-          rm -rf /tmp/build-pkg
-          cp -r "${{ inputs.package_path }}" /tmp/build-pkg
-          rm -rf /tmp/build-pkg/.git
-          chown -R builder:builder /tmp/build-pkg
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+          echo "default-key ${{ secrets.GPG_KEY_ID }}" >> ~/.gnupg/gpg.conf || true
 
       - name: Build package
         run: |
-          su builder -c "cd /tmp/build-pkg && paru -B --noconfirm ."
+          set -euo pipefail
+          cd "packages/${{ matrix.group }}/${{ matrix.name }}"
+          sudo -u builder makepkg --syncdeps --noconfirm --clean
 
-      - name: Upload built package
-        uses: actions/upload-artifact@v4
+      - name: Sign built packages
+        run: |
+          set -euo pipefail
+          cd "packages/${{ matrix.group }}/${{ matrix.name }}"
+          shopt -s nullglob
+          pkgs=(*.pkg.tar.zst)
+          if [ ${#pkgs[@]} -eq 0 ]; then
+            echo "::error::No package produced for ${{ matrix.name }}"
+            exit 1
+          fi
+          for pkg in "${pkgs[@]}"; do
+            gpg --batch --yes --pinentry-mode loopback \
+              --passphrase "${{ secrets.GPG_PASSPHRASE }}" \
+              --local-user "${{ secrets.GPG_KEY_ID }}" \
+              --detach-sign --output "${pkg}.sig" "$pkg"
+          done
+          mkdir -p /tmp/out
+          cp "${pkgs[@]}" *.sig /tmp/out/
+
+      - uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.name.outputs.name }}
-          path: /tmp/build-pkg/*.pkg.tar.zst
-          if-no-files-found: error
+          name: pkg-${{ matrix.group }}-${{ matrix.name }}
+          path: /tmp/out/*
           retention-days: 1
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    steps:
+      - name: Prep tools
+        run: pacman -Syu --noconfirm --needed gnupg pacman-contrib awscli
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: repo-out
+          pattern: pkg-*
+          merge-multiple: true
+
+      - name: Import GPG key
+        run: |
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+
+      - name: Build repo database
+        run: |
+          set -euo pipefail
+          cd repo-out
+          ls -la
+          repo-add --sign --key "${{ secrets.GPG_KEY_ID }}" \
+            --nocolor \
+            "${{ env.REPO_NAME }}.db.tar.gz" *.pkg.tar.zst
+
+      - name: Sync to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          aws s3 sync repo-out/ "s3://${{ env.R2_BUCKET }}/" \
+            --endpoint-url "${{ secrets.R2_ENDPOINT }}" \
+            --no-progress
