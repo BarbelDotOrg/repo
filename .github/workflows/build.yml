@@ -13,9 +13,11 @@ concurrency:
 
 env:
   # --- EDIT THESE ---
-  REPO_NAME: barbel          # name of your pacman repo (barbel.db.tar.gz etc.)
-  R2_BUCKET: barbel-repo      # your R2 bucket name (not in the secrets you pasted - add it)
+  REPO_NAME: barbel               # name of your pacman repo (barbel.db.tar.gz etc.)
+  R2_BUCKET: public               # confirm this in Cloudflare - guessing based on your pacman.conf
+  R2_PREFIX: barbel/os/x86_64     # must match the path in pacman.conf's Server= line
   # -------------------
+
 
 jobs:
   discover:
@@ -253,12 +255,25 @@ jobs:
             --nocolor \
             "${{ env.REPO_NAME }}.db.tar.gz" *.pkg.tar.zst
 
+      - name: Ensure R2 bucket exists
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          aws s3api create-bucket --bucket "${{ env.R2_BUCKET }}" \
+            --endpoint-url "${{ secrets.R2_ENDPOINT }}" \
+            2>&1 | tee /tmp/create-bucket.log || true
+          if grep -qi "error" /tmp/create-bucket.log && ! grep -qi "BucketAlreadyOwnedByYou\|BucketAlreadyExists" /tmp/create-bucket.log; then
+            echo "::warning::Bucket creation reported an issue - see log above. Continuing to sync anyway; if the bucket genuinely doesn't exist, the next step will fail with a clearer error."
+          fi
+
       - name: Sync to R2
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: auto
         run: |
-          aws s3 sync repo-out/ "s3://${{ env.R2_BUCKET }}/" \
+          aws s3 sync repo-out/ "s3://${{ env.R2_BUCKET }}/${{ env.R2_PREFIX }}/" \
             --endpoint-url "${{ secrets.R2_ENDPOINT }}" \
             --no-progress
