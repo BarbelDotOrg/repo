@@ -212,7 +212,16 @@ jobs:
       image: archlinux:base-devel
     steps:
       - name: Prep tools
-        run: pacman -Syu --noconfirm --needed gnupg pacman-contrib awscli
+        run: |
+          set -euo pipefail
+          pacman -Syu --noconfirm --needed gnupg pacman-contrib curl unzip
+
+          # awscli is AUR-only on Arch (not in core/extra), so install the
+          # official standalone bundle instead - no Python/pip needed.
+          curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
+          unzip -q /tmp/awscliv2.zip -d /tmp
+          /tmp/aws/install
+          aws --version
 
       - uses: actions/download-artifact@v4
         with:
