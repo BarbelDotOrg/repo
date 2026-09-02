@@ -64,9 +64,6 @@
 [submodule "packages/own/wallpapers"]
 	path = packages/own/wallpapers
 	url = https://github.com/barbeldotorg/wallpapers
-[submodule "packages/own/charist"]
-	path = packages/own/charist
-	url = https://github.com/barbeldotorg/charist
 [submodule "packages/aur/cupola-git"]
 	path = packages/aur/cupola-git
 	url = https://aur.archlinux.org/cupola-git.git
