@@ -87,8 +87,25 @@ jobs:
           chown -R builder:builder "$GITHUB_WORKSPACE"
 
       - name: Import GPG key
+        env:
+          GPG_PRIVATE_KEY_RAW: ${{ secrets.GPG_PRIVATE_KEY }}
         run: |
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+          set -euo pipefail
+          echo "Secret length (chars): ${#GPG_PRIVATE_KEY_RAW}"
+          echo "First line: $(printf '%s\n' "$GPG_PRIVATE_KEY_RAW" | head -1)"
+          echo "Last line:  $(printf '%s\n' "$GPG_PRIVATE_KEY_RAW" | tail -1)"
+
+          # Try raw armored text first (works if the secret is the direct gpg --export-secret-keys --armor output)
+          if printf '%s\n' "$GPG_PRIVATE_KEY_RAW" | gpg --batch --import 2>/tmp/import.log; then
+            echo "Imported as raw armored text."
+          # Fall back to base64 (works if the secret is base64-encoded)
+          elif printf '%s\n' "$GPG_PRIVATE_KEY_RAW" | base64 -d 2>/dev/null | gpg --batch --import 2>>/tmp/import.log; then
+            echo "Imported as base64."
+          else
+            echo "::error::GPG import failed both as raw armor and as base64."
+            cat /tmp/import.log
+            exit 1
+          fi
           echo "default-key ${{ secrets.GPG_KEY_ID }}" >> ~/.gnupg/gpg.conf || true
 
       - name: Build package
@@ -139,8 +156,19 @@ jobs:
           merge-multiple: true
 
       - name: Import GPG key
+        env:
+          GPG_PRIVATE_KEY_RAW: ${{ secrets.GPG_PRIVATE_KEY }}
         run: |
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+          set -euo pipefail
+          if printf '%s\n' "$GPG_PRIVATE_KEY_RAW" | gpg --batch --import 2>/tmp/import.log; then
+            echo "Imported as raw armored text."
+          elif printf '%s\n' "$GPG_PRIVATE_KEY_RAW" | base64 -d 2>/dev/null | gpg --batch --import 2>>/tmp/import.log; then
+            echo "Imported as base64."
+          else
+            echo "::error::GPG import failed both as raw armor and as base64."
+            cat /tmp/import.log
+            exit 1
+          fi
 
       - name: Build repo database
         run: |
