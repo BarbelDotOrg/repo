@@ -97,6 +97,21 @@ jobs:
           path: /tmp/out
           key: pkg-${{ matrix.group }}-${{ matrix.name }}-${{ steps.pkgref.outputs.ref }}
 
+      - name: Restore cargo cache
+        if: steps.pkgcache.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            /home/builder/.cargo/registry
+            /home/builder/.cargo/git
+          key: cargo-registry-v1
+          restore-keys: |
+            cargo-registry-
+
+      - name: Fix cargo cache ownership
+        if: steps.pkgcache.outputs.cache-hit != 'true'
+        run: chown -R builder:builder /home/builder/.cargo
+
       - name: Init package submodule (if it is one)
         if: steps.pkgcache.outputs.cache-hit != 'true'
         run: |
