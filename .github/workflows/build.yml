@@ -12,12 +12,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # --- EDIT THESE ---
-  REPO_NAME: barbel               # name of your pacman repo (barbel.db.tar.gz etc.)
-  R2_BUCKET: public               # confirm this in Cloudflare - guessing based on your pacman.conf
-  R2_PREFIX: barbel/os/x86_64     # must match the path in pacman.conf's Server= line
-  # -------------------
-
+  REPO_NAME: barbel
+  R2_BUCKET: public
+  R2_PREFIX: barbel/os/x86_64
 
 jobs:
   discover:
@@ -84,8 +81,6 @@ jobs:
         run: |
           set -euo pipefail
           PKG_PATH="packages/${{ matrix.group }}/${{ matrix.name }}"
-          # Works for submodules (returns the pinned commit SHA) and plain
-          # dirs (returns the tree SHA) without needing the submodule inited.
           REF=$(git rev-parse "HEAD:$PKG_PATH")
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           echo "Package ref for $PKG_PATH: $REF"
@@ -108,6 +103,13 @@ jobs:
           restore-keys: |
             cargo-registry-
 
+      - name: Create unprivileged build user
+        if: steps.pkgcache.outputs.cache-hit != 'true'
+        run: |
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+
       - name: Fix cargo cache ownership
         if: steps.pkgcache.outputs.cache-hit != 'true'
         run: chown -R builder:builder /home/builder/.cargo
@@ -125,24 +127,6 @@ jobs:
             echo "$PKG_PATH is not a submodule, nothing to init."
           fi
 
-      - name: Create unprivileged build user
-        if: steps.pkgcache.outputs.cache-hit != 'true'
-        run: |
-          useradd -m builder
-          echo "builder ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/builder
-          chown -R builder:builder "$GITHUB_WORKSPACE"
-
-      - name: Restore cargo cache
-        if: steps.pkgcache.outputs.cache-hit != 'true'
-        uses: actions/cache@v4
-        with:
-          path: |
-            /home/builder/.cargo/registry
-            /home/builder/.cargo/git
-          key: cargo-registry-v1
-          restore-keys: |
-            cargo-registry-
-
       - name: Import GPG key
         if: steps.pkgcache.outputs.cache-hit != 'true'
         env:
@@ -153,10 +137,8 @@ jobs:
           echo "First line: $(printf '%s\n' "$GPG_PRIVATE_KEY_RAW" | head -1)"
           echo "Last line:  $(printf '%s\n' "$GPG_PRIVATE_KEY_RAW" | tail -1)"
 
-          # Try raw armored text first (works if the secret is the direct gpg --export-secret-keys --armor output)
           if printf '%s\n' "$GPG_PRIVATE_KEY_RAW" | gpg --batch --import 2>/tmp/import.log; then
             echo "Imported as raw armored text."
-          # Fall back to base64 (works if the secret is base64-encoded)
           elif printf '%s\n' "$GPG_PRIVATE_KEY_RAW" | base64 -d 2>/dev/null | gpg --batch --import 2>>/tmp/import.log; then
             echo "Imported as base64."
           else
@@ -233,8 +215,6 @@ jobs:
           set -euo pipefail
           pacman -Syu --noconfirm --needed gnupg pacman-contrib curl unzip
 
-          # awscli is AUR-only on Arch (not in core/extra), so install the
-          # official standalone bundle instead - no Python/pip needed.
           curl -sSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o /tmp/awscliv2.zip
           unzip -q /tmp/awscliv2.zip -d /tmp
           /tmp/aws/install
