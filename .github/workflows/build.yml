@@ -166,6 +166,7 @@ jobs:
         if: steps.pkgcache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
+          chown -R builder:builder "$GITHUB_WORKSPACE"
           cd "packages/${{ matrix.group }}/${{ matrix.name }}"
           sudo -u builder makepkg --syncdeps --noconfirm --clean
 
