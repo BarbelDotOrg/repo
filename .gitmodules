@@ -76,3 +76,6 @@
 [submodule "packages/own/defaults"]
 	path = packages/own/defaults
 	url = https://github.com/barbeldotorg/defaults.git
+[submodule "packages/own/oracle"]
+	path = packages/own/oracle
+	url = https://github.com/barbeldotorg/oracle.git
