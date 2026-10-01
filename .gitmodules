@@ -91,3 +91,6 @@
 [submodule "packages/aur/zsh-autopair-git"]
 	path = packages/aur/zsh-autopair-git
 	url = https://aur.archlinux.org/zsh-autopair-git.git
+[submodule "packages/aur/fzf-tab"]
+	path = packages/aur/fzf-tab
+	url = https://aur.archlinux.org/fzf-tab.git
