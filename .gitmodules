@@ -79,3 +79,6 @@
 [submodule "packages/aur/fzf-tab"]
 	path = packages/aur/fzf-tab
 	url = https://aur.archlinux.org/fzf-tab.git
+[submodule "packages/own/barbelos-shell-config"]
+	path = packages/own/barbelos-shell-config
+	url = https://github.com/barbeldotorg/barbelos-shell-config
