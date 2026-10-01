@@ -85,3 +85,6 @@
 [submodule "packages/aur/sysd-manager"]
 	path = packages/aur/sysd-manager
 	url = https://aur.archlinux.org/sysd-manager.git
+[submodule "packages/own/barbelos-snapper-config"]
+	path = packages/own/barbelos-snapper-config
+	url = https://github.com/barbeldotorg/barbelos-snapper-config
