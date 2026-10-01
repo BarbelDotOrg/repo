@@ -88,3 +88,6 @@
 [submodule "packages/own/barbelos-snapper-config"]
 	path = packages/own/barbelos-snapper-config
 	url = https://github.com/barbeldotorg/barbelos-snapper-config
+[submodule "packages/aur/zsh-autopair-git"]
+	path = packages/aur/zsh-autopair-git
+	url = https://aur.archlinux.org/zsh-autopair-git.git
