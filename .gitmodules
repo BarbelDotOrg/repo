@@ -73,3 +73,6 @@
 [submodule "packages/own/barbelos-shell-config"]
 	path = packages/own/barbelos-shell-config
 	url = https://github.com/barbeldotorg/barbelos-shell-config
+[submodule "packages/aur/photocraft"]
+	path = packages/aur/photocraft
+	url = https://aur.archlinux.org/photocraft.git
