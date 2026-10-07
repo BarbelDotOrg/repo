@@ -76,3 +76,6 @@
 [submodule "packages/aur/photocraft"]
 	path = packages/aur/photocraft
 	url = https://aur.archlinux.org/photocraft.git
+[submodule "packages/aur/vectorcraft"]
+	path = packages/aur/vectorcraft
+	url = https://aur.archlinux.org/vectorcraft.git
